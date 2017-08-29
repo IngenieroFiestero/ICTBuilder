@@ -493,10 +493,10 @@ for channel=1:n_uhf
     intensity = frecIntensity(channel,2);
     longOnda = (3*10^8)/(frec*(10^6));%(m)
     fmCampo = 10*log10(intensity);%(dBs)
-    %La atenuacion a UHF se obtiene interpolando las frecuencias del coaxial (W)
-    signalInAmpl = ((intensity^2) * (longOnda^2) * (10^(frecuency_interpolation(frec,uhfFrecuencyAtenuation)/10))) / ( 4*120*(pi^2)*(dFM*frecuency_interpolation( frec, coaxialFrecuencyAtenuation )));
+    %La atenuacion a FM se obtiene interpolando las frecuencias del coaxial (W)
+    signalInAmpl = ((intensity^2) * (longOnda^2) * (10^(frecuency_interpolation(frec,fmFrecuencyAtenuation)/10))) / ( 4*120*(pi^2)*(dFM*frecuency_interpolation( frec, coaxialFrecuencyAtenuation )));
     %Atenuación a la salida del amplificador (dBW)
-    signalOutAmpl = 10*log10(signalInAmpl) + frecuency_interpolation(frec,uhfAmplifierG);%(dBW) señal a la salida del amplificador
+    signalOutAmpl = 10*log10(signalInAmpl) + frecuency_interpolation(frec,fmAmplifierG);%(dBW) señal a la salida del amplificador
     signalOutDistri = signalOutAmpl - frecuency_interpolation(frec,splitterInsertionLoss);%(dBW) señal tras el distribuidor (duplica para los satelites)
     signalOutComb = signalOutDistri - frecuency_interpolation(frec,combAtenuation);%(dBW) señal tras el combinador
     signalDerivatorIn = signalOutComb - dFloor*frecuency_interpolation(frec,coaxialFrecuencyAtenuation);%(dBW) señal que llega al derivador de planta
@@ -544,7 +544,7 @@ for channel=1:n_uhf
                 end
                 %Calculamos la señal que obtenemos en la toma-------------
                 signalTomaFinal = signalToma - frecuency_interpolation(frec,tomas{toma,2});
-                edificio{n_Floor}{house_n}{toma_n}{n_fm + channel}{1} = num2str(frecIntensity(channel,3));
+                edificio{n_Floor}{house_n}{toma_n}{n_fm + channel}{1} = num2str(channel);
                 edificio{n_Floor}{house_n}{toma_n}{n_fm + channel}{2} = signalTomaFinal;
                 %Calculamos el nivel de SNR en la toma--------------------
                 % Pendiente......
@@ -611,8 +611,8 @@ for sat_n=1:nSAT
                     %Creamos los canales para cada toma de la vivienda
                     edificio{n_Floor}{house_n}{toma_n} = cell(nChannels,1);
                 end
-                if iscell(edificio{n_Floor}{house_n}{toma_n}{nFM + nUHF + sat_n}) ~=1 %No es celda = no creado
-                    edificio{n_Floor}{house_n}{toma_n}{nFM + nUHF + sat_n} = cell(3,1);
+                if iscell(edificio{n_Floor}{house_n}{toma_n}{nFM + sat_n}) ~=1 %No es celda = no creado
+                    edificio{n_Floor}{house_n}{toma_n}{nFM + + sat_n} = cell(3,1);
                 end
                 dToma = housesInOneFloor{house_n}(toma_n);
                 %Atenuacion la señal por distancia
@@ -625,8 +625,8 @@ for sat_n=1:nSAT
                 end
                 %Calculamos la señal que obtenemos en la toma-------------
                 signalTomaFinal = signalToma - frecuency_interpolation(frec,tomas{toma,2});
-                edificio{n_Floor}{house_n}{toma_n}{nFM + nUHF + sat_n}{1} = satMatrix{sat_n,1};%Nombre del satelite
-                edificio{n_Floor}{house_n}{toma_n}{nFM + nUHF + sat_n}{2} = signalTomaFinal;
+                edificio{n_Floor}{house_n}{toma_n}{nFM + sat_n}{1} = satMatrix{sat_n,1};%Nombre del satelite
+                edificio{n_Floor}{house_n}{toma_n}{nFM + sat_n}{2} = signalTomaFinal;
                 %Calculamos el nivel de SNR en la toma--------------------
                 % Pendiente......
                 %
