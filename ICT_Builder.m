@@ -52,8 +52,8 @@ fmIntensity = [
 ];
 
 % Matriz de intensidades de Frecuencias
-% |__Frecuency (Mhz)__|__Intensity (V/m)__|
-% |________482________|___ 5.6 * 10^-3 ___|% Multiplex 22 = Gol, DisneyChannel...
+% |__Frecuency (Mhz)__|__Intensity (V/m)__|__Nombre Multiplex__|
+% |________482________|___ 5.6 * 10^-3 ___|_________22_________|
 frecIntensity = [
     482, 5.6 * 10^-3, 22; % Multiplex 22 = Gol, DisneyChannel...
     530, 6 * 10^-3, 28;   % Multiplex 28 = Atreseries HD, RealMadrid TV...
@@ -78,6 +78,11 @@ satMatrix = {
 [nUHF,basura] = size(frecIntensity);
 [nSAT,basura] = size(satMatrix);
 nChannels = nFM+ nUHF + nSAT;
+
+%Anchos de banda
+fmBW=200000;
+uhfBW = 8000000;
+satBW = 36000000;
 %% 
 % ---------------------------Datos Componentes ---------------------------
 %-------------------------------------------------------------------------
@@ -313,10 +318,12 @@ derivators = {
     %'UDL-115',1, 15, [5,1;  862,1;  950,1.7;1550,1.7; 1551,2.2;2300,2.2;],[5,28;300,28;301,27;862,27; 950,23;2300,23;],[5,0;300,0;301,0;862,0; 950,0;2300,0;],15;
     %'UDL-120',1, 20, [5,0.9;862,0.9;950,1.6;1550,1.6; 1551,2.1;2300,2.1;],[5,31;300,31;301,28;862,28; 950,19;2300,19;],[5,0;300,0;301,0;862,0; 950,0;2300,0;],15;
     %'UDL-125',1, 25, [5,0.5;862,0.5;950,1.3;1550,1.3; 1551,2.0;2300,2.0;],[5,38;300,38;301,35;862,35; 950,24;2300,24;],[5,0;300,0;301,0;862,0; 950,0;2300,0;],15;
-    'UDL-816',8, 16, [5,4;862,4;950,4.4;1550,4.4; 1551,4.8;2300,4.8;],[5,30;300,30;301,30;862,30; 950,27;2300,27;],[5,34;300,34;301,32;862,32; 950,25;2300,25;],10;
-    'UDL-820',8, 20, [5,1.8;862,1.8;950,2;1550,2; 1551,2.2;2300,2.2;],[5,30;300,30;301,30;862,30; 950,23;2300,23;],[5,30;300,30;301,28;862,28; 950,28;2300,28;],10;
+    
     'UDL-825',8, 25, [5,1.8;862,1.8;950,2;1550,2; 1551,2.2;2300,2.2;],[5,33;300,33;301,36;862,36; 950,28;2300,28;],[5,30;300,30;301,28;862,28; 950,28;2300,28;],10;
-};
+    
+    'UDL-820',8, 20, [5,1.8;862,1.8;950,2;1550,2; 1551,2.2;2300,2.2;],[5,30;300,30;301,30;862,30; 950,23;2300,23;],[5,30;300,30;301,28;862,28; 950,28;2300,28;],10;
+    'UDL-816',8, 16, [5,4;862,4;950,4.4;1550,4.4; 1551,4.8;2300,4.8;],[5,30;300,30;301,30;862,30; 950,27;2300,27;],[5,34;300,34;301,32;862,32; 950,25;2300,25;],10;
+    };
 [nDerivators,basura]=size(derivators);
 
 %-------------------------------- PAU -------------------------------------
@@ -338,17 +345,26 @@ pauInsertionLoss = [
 % Ref: 2479
 % Estructura de la celda(cell)
 %
-% |_____________|__Atenuation_Conexion(dB)__|___Atenuation_Pass(dB)___|_Desacoplo_entre_salidas(dB)__|__Perdidas_de_retorno_(dB)__|
-% |____Toma_1___|____________16_____________|__[5,4;862,4;950,4.4;]___|_____[5,34;862,32;950,30;]____|_____________25_____________|
+% |_____________|__Atenuation_Conexion(dB)__|___Atenuation_Pass(dB)___|__Perdidas_de_retorno_(dB)__|__Price__|
+% |____Toma_1___|___[5,4;862,4;950,4.4;]____|__[5,4;862,4;950,4.4;]___|_____________25_____________|__8.35___|
 
 %Colocar en orden de uso
+%  ______________________________________________
+% | ________________IMPORTANTE___________________|
+% Jugar con las tomas para obtener un valor correcto.
+% Una posible mejora es que el algoritmo optimize la colocación de las
+% tomas. De momento hay que hacerlo a mano.
+%
 tomas = {
-    'ARTU-901',[5,11; 862,11; 950,11; 2300,11;], [5,2;  862,2;  950,3;  2300,3;],25;
-    'ARTU-902',[5,15; 862,15; 950,15; 2300,15;], [5,1.3;862,1.3;950,2.5;2300,2.5;],25;
-    'ARTU-903',[5,19; 862,19; 950,18; 2300,18;], [5,1.3;862,1.3;950,2.5;2300,2.5;],25;
-    'ARTU-900',[5,4.5;862,4.5;950,5.5;2300,5.5;],[5,0;  862,0;  950,0;  2300,0;],25;
+    'ARTU-901',[5,11; 862,11; 950,11; 2300,11;], [5,2;  862,2;  950,3;  2300,3;],25,12;
+    %'ARTU-902',[5,15; 862,15; 950,15; 2300,15;], [5,1.3;862,1.3;950,2.5;2300,2.5;],25,12;
+    %'ARTU-903',[5,19; 862,19; 950,18; 2300,18;], [5,1.3;862,1.3;950,2.5;2300,2.5;],25,12;
+    'ARTU-900',[5,4.5;862,4.5;950,5.5;2300,5.5;],[5,0;  862,0;  950,0;  2300,0;],25,12;
 };
 [nTomas,basura]=size(tomas);
+% Hacer algoritmo de optimización en la selección de tomas para tener la 
+% maxima señal en todas las tomas de la vivienda
+
 %% Pre-checker
 % Comprueba que los componentes esten bien puestos
 
@@ -390,6 +406,21 @@ if(pauNIn < n_sat)
     error(['Numero de entradas de PAU = ' num2str(pauNIn) ' menor que el numero de satelites = ' num2str(n_sat)]);
 end
 
+%Numero de tomas y añadir ya el precio
+nTomasTotal = 0;
+precioTotal = 0;% Cada toma es diferente
+for floor_n=1:nFloor
+    for house_n=1:nHouses
+        [basura,nTomasHouse] = size(housesInOneFloor{house_n});
+        nTomasTotal = nTomasTotal + nTomasHouse;
+        vecTomas = toma_algoritmo( tomas,nTomasHouse );
+        for i=1:size(vecTomas)
+            precioTotal = precioTotal + tomas{vecTomas(i),5};%Añadir precio de cada toma
+        end
+    end
+end
+
+
 %% Calculadora ----------------------------------------------------------
 % Para aclarar conceptos y no liar variables que empiezan parecido ej :
 % nFloor haremos a partir de este punto que las constantes sean de
@@ -408,6 +439,19 @@ end
 % asi como tambien la señal que llega y el nivel de señal a ruido.
 edificio = cell(nFloor,1);
 
+%Maxima y minima potencia de todas las tomas para cada frecuencia
+% _______________________________________________________
+%|______Channel_____|____Max_Signal___|____Min_Signal____|
+maxMinSignal = cell(nChannels,3);
+%Poner a un valor muy bajo en dBs ej: -200 dBs
+for i = 1:nChannels
+    maxMinSignal{i,2} = cell(2,1);
+    maxMinSignal{i,2}{1} = '';
+    maxMinSignal{i,2}{2} = -200;
+    maxMinSignal{i,3} = cell(2,1);
+    maxMinSignal{i,3}{1} = '';
+    maxMinSignal{i,3}{2} = 200;
+end
 
 K=1.38*10^-23;
 %% ---CalculoFM------------------------------------------------------------
@@ -446,8 +490,10 @@ for n_fm = 1: nFM
                 %Creamos las tomas de la vivienda
                 edificio{n_Floor}{house_n} = cell(nTomasHouse,1);
             end
+            vecTomas = toma_algoritmo( tomas,nTomasHouse );
             signalToma = signal_pau_floor_out;%Señal antes de la primera toma de la vivienda (Hay que contar para cada vivienda la distancia)
             for toma_n=1:nTomasHouse%Toma por toma
+                %['floor=' num2str(n_Floor) ' house=' num2str(house_n) ' toma=' num2str(toma_n)]%Debug
                 %Estructura de edificio
                 if iscell(edificio{n_Floor}{house_n}{toma_n}) ~=1 %No es celda = no creado
                     %Creamos los canales para cada toma de la vivienda
@@ -460,22 +506,34 @@ for n_fm = 1: nFM
                 %Atenuacion la señal por distancia
                 signalToma = signalToma - dToma*frecuency_interpolation(frec,coaxialFrecuencyAtenuation);
                 %Elegimos un tipo de toma
-                if(toma_n == nTomasHouse)%Si es la ultima toma ponemos la final
-                    toma = nTomas;%La toma es la ultima
-                else%Si no es la ultima toma
-                    toma = round(toma_n*(nTomas-1)/(nTomasHouse-1));%La toma elegida no puede ser la ultima
-                end
+                toma = vecTomas(toma_n);
                 %Calculamos la señal que obtenemos en la toma-------------
+                
+                %attDerivationdEV =
+                %frecuency_interpolation(frec,tomas{toma,2})%debug
                 signalTomaFinal = signalToma - frecuency_interpolation(frec,tomas{toma,2});
-                edificio{n_Floor}{house_n}{toma_n}{n_fm}{1} = 'FM';
+                edificio{n_Floor}{house_n}{toma_n}{n_fm}{1} = ['FM' num2str(n_fm)];
                 edificio{n_Floor}{house_n}{toma_n}{n_fm}{2} = signalTomaFinal;
+                if(signalTomaFinal > maxMinSignal{n_fm,2}{2})
+                     maxMinSignal{n_fm,1} = ['FM' num2str(n_fm)];
+                     maxMinSignal{n_fm,2}{1} = ['floor=' num2str(n_Floor) ' house=' num2str(house_n) ' toma=' num2str(toma_n)];
+                     maxMinSignal{n_fm,2}{2} = signalTomaFinal;
+                end
+                if(signalTomaFinal < maxMinSignal{n_fm,3}{2})
+                     maxMinSignal{n_fm,1} = ['FM' num2str(n_fm)];
+                     maxMinSignal{n_fm,3}{1} = ['floor=' num2str(n_Floor) ' house=' num2str(house_n) ' toma=' num2str(toma_n)];
+                     maxMinSignal{n_fm,3}{2} = signalTomaFinal;
+                end
                 %Calculamos el nivel de SNR en la toma--------------------
                 % Pendiente......
-                %
+                Ta = 950;
+                T0 = 290;
+                initialNoise = K*fmBW*Ta;
                 %
                 %
                 %
                 %Pasamos a la siguiente toma y atenuamos por paso
+                %attPasoPaso = frecuency_interpolation(frec,tomas{toma,3})%DEBUG
                 signalToma = signalToma - frecuency_interpolation(frec,tomas{toma,3});
             end
 
@@ -524,6 +582,7 @@ for channel=1:n_uhf
                 edificio{n_Floor}{house_n} = cell(nTomasHouse,1);
             end
             signalToma = signal_pau_floor_out;%Señal antes de la primera toma de la vivienda (Hay que contar para cada vivienda la distancia)
+            vecTomas = toma_algoritmo( tomas,nTomasHouse );
             for toma_n=1:nTomasHouse%Toma por toma
                 %Estructura de edificio
                 if iscell(edificio{n_Floor}{house_n}{toma_n}) ~=1 %No es celda = no creado
@@ -537,15 +596,23 @@ for channel=1:n_uhf
                 %Atenuacion la señal por distancia
                 signalToma = signalToma - dToma*frecuency_interpolation(frec,coaxialFrecuencyAtenuation);
                 %Elegimos un tipo de toma
-                if(toma_n == nTomasHouse)%Si es la ultima toma ponemos la final
-                    toma = nTomas;%La toma es la ultima
-                else%Si no es la ultima toma
-                    toma = round(toma_n*(nTomas-1)/(nTomasHouse-1));%La toma elegida no puede ser la ultima
-                end
+                toma = vecTomas(toma_n);
                 %Calculamos la señal que obtenemos en la toma-------------
                 signalTomaFinal = signalToma - frecuency_interpolation(frec,tomas{toma,2});
                 edificio{n_Floor}{house_n}{toma_n}{n_fm + channel}{1} = num2str(frecIntensity(channel,3));
                 edificio{n_Floor}{house_n}{toma_n}{n_fm + channel}{2} = signalTomaFinal;
+                
+                if(signalTomaFinal > maxMinSignal{n_fm + channel,2}{2})
+                     maxMinSignal{n_fm + channel,1} = num2str(frecIntensity(channel,3));
+                     maxMinSignal{n_fm + channel,2}{1} = ['floor=' num2str(n_Floor) ' house=' num2str(house_n) ' toma=' num2str(toma_n)];
+                     maxMinSignal{n_fm + channel,2}{2} = signalTomaFinal;
+                end
+                if(signalTomaFinal < maxMinSignal{n_fm + channel,3}{2})
+                     maxMinSignal{n_fm + channel,1} = num2str(frecIntensity(channel,3));
+                     maxMinSignal{n_fm + channel,3}{1} = ['floor=' num2str(n_Floor) ' house=' num2str(house_n) ' toma=' num2str(toma_n)];
+                     maxMinSignal{n_fm + channel,3}{2} = signalTomaFinal;
+                end
+                
                 %Calculamos el nivel de SNR en la toma--------------------
                 % Pendiente......
                 %
@@ -604,6 +671,7 @@ for sat_n=1:nSAT
                 %Creamos las tomas de la vivienda
                 edificio{n_Floor}{house_n} = cell(nTomasHouse,1);
             end
+            vecTomas = toma_algoritmo( tomas,nTomasHouse );
             signalToma = signal_pau_floor_out;%Señal antes de la primera toma de la vivienda (Hay que contar para cada vivienda la distancia)
             for toma_n=1:nTomasHouse%Toma por toma
                 %Estructura de edificio
@@ -618,11 +686,7 @@ for sat_n=1:nSAT
                 %Atenuacion la señal por distancia
                 signalToma = signalToma - dToma*frecuency_interpolation(frec,coaxialFrecuencyAtenuation);
                 %Elegimos un tipo de toma
-                if(toma_n == nTomasHouse)%Si es la ultima toma ponemos la final
-                    toma = nTomas;%La toma es la ultima
-                else%Si no es la ultima toma
-                    toma = round(toma_n*(nTomas-1)/(nTomasHouse-1));%La toma elegida no puede ser la ultima
-                end
+                toma = vecTomas(toma_n);
                 %Calculamos la señal que obtenemos en la toma-------------
                 signalTomaFinal = signalToma - frecuency_interpolation(frec,tomas{toma,2});
                 edificio{n_Floor}{house_n}{toma_n}{nFM + nUHF + sat_n}{1} = satMatrix{sat_n,1};%Nombre del satelite
@@ -648,11 +712,12 @@ end
 
 %% Calculadora Precio
 
-precioTotal = neededCombs*combPrice;                                                                                                         %Combinadores
+precioTotal = precioTotal + neededCombs*combPrice;                                                                                                         %Combinadores
 precioTotal = precioTotal + neededUHFChanelAmplifiers*uhfAmplifierPrice;                                                                     %Amplificadores UHF
 precioTotal = precioTotal + 1*fmAmplifierPrice;                                                                                              %Amplificadores FM
 precioTotal = precioTotal + n_sat*satAmplifierPrice;                                                                                         %Amplificadores SAT
 precioTotal = precioTotal + neededPrincipalSplitter * splitterPrice;                                                                         %Splitter principal
 precioTotal = precioTotal + neededSateliteAntenna*satPricePerUnit + neededFMAntenna*fmPricePerUnit + neededUHFAntenna*uhfPricePerUnit;       %Antenas
-precioTotal = precioTotal + neededCoaxial*coaxialPricePerUnit;                                                                               %Combinadores
+precioTotal = precioTotal + neededCoaxial*coaxialPricePerUnit; 
+%Combinadores
 
