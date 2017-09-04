@@ -43,7 +43,7 @@ housesInOneFloor = {
 dAmpDistr = 0;
 
 % Distancia entre las antenas y los ampplificadores.   (m) distancia en Metros
-dTV = 10;
+dUHF = 10;
 dFM = 10;
 dSAT = 9;
 
@@ -140,7 +140,17 @@ uhfFrecuencyAtenuation = [
     674, 15.7; % Multiplex 46 = La 1/HD, La 2...
     738, 17; % Multiplex 54 = Antena 3/HD, LaSexta/HD...
 ];
-
+uhfTa = [
+    482, 159; % Multiplex 22 = Gol, DisneyChannel...
+    530, 104.5;   % Multiplex 28 = Atreseries HD, RealMadrid TV...
+    546, 104.5; % Multiplex 30 = Telecinco/HD, Cuatro/HD...
+    570, 104.5;   % Multiplex 33 = TDT/HD, DKiss...
+    626, 73.5; % Multiplex 40 = Aragon TV, Aragon 2 TV...
+    642, 73.5;   % Multiplex 42 = Boing, Energy, Mega, 13TV...
+    674, 52.5; % Multiplex 46 = La 1/HD, La 2...
+    738, 52.5; % Multiplex 54 = Antena 3/HD, LaSexta/HD...
+];
+uhfNoiseFigure = 0;
 %% ---------------------------- Antena Radio FM -------------------------------
 % Nombre: IKS1E
 % Datasheet: http://www.ikusi.tv/sites/default/files/imported/descargables/Ficha%20tecnica%20FLASHD.pdf
@@ -163,12 +173,22 @@ fmNoiseFigure = 0;
 % Precio de la antena por unidad (euros)
 satPricePerUnit = 102.5;
 
+satDiameter = 1;
+
 % Tabla de atenuaciones para cada frecuencia.
 % |__Frecuency (Mhz)__|__Atenuation (dB)__|
 satFrecuencyAtenuation = [
     12500, 40.3
 ];
 uhfNoiseFigure = 0;
+
+%% ------------------------------ LNB ------------------------------------
+% Nombre: UEU-121K
+% Datasheet: http://www.ikusi.tv/sites/default/files/imported/descargables/Ficha%20tecnica%20UEU-121K_es.pdf
+% Ref: 1113
+lnbG = 58;
+lnbNoise = 0.2;
+
 %% ---------------------- Distribuidor Television ------------------------
 % Se encarga de dividir la señal de TV en el numero de satelites del que
 % dispongamos (Hispasat y ASTRA) para tener tomas independientes.
@@ -390,7 +410,7 @@ neededFMAntenna = 1;
 neededUHFAntenna = 1;
 
 %Calculo Metros de cable
-dTotal = dTV + dFM + dSAT*n_sat + dAmpDistr;%Hasta los amplificadores
+dTotal = dUHF + dFM + dSAT*n_sat + dAmpDistr;%Hasta los amplificadores
 for n_house = 1:nHouses
     %Añadimos los cables de cada vivienda
     dTotal = dTotal + sum(housesInOneFloor{n_house}(2:end))*nFloor;
@@ -440,9 +460,9 @@ end
 edificio = cell(nFloor,1);
 
 %Maxima y minima potencia de todas las tomas para cada frecuencia
-% _______________________________________________________
-%|______Channel_____|____Max_Signal___|____Min_Signal____|
-maxMinSignal = cell(nChannels,3);
+% ___________________________________________________________________________________
+%|______Channel_____|____Max_Signal___|____Min_Signal____|___MAX_SNR___|___Min_SNR___|
+maxMinSignal = cell(nChannels,5);
 %Poner a un valor muy bajo en dBs ej: -200 dBs
 for i = 1:nChannels
     maxMinSignal{i,2} = cell(2,1);
@@ -451,14 +471,34 @@ for i = 1:nChannels
     maxMinSignal{i,3} = cell(2,1);
     maxMinSignal{i,3}{1} = '';
     maxMinSignal{i,3}{2} = 200;
+    maxMinSignal{i,4} = cell(2,1);
+    maxMinSignal{i,4}{1} = '';
+    maxMinSignal{i,4}{2} = -200;
+    maxMinSignal{i,5} = cell(2,1);
+    maxMinSignal{i,5}{1} = '';
+    maxMinSignal{i,5}{2} = 200;
 end
 
 K=1.38*10^-23;
 %% ---CalculoFM------------------------------------------------------------
+Ta = 950;
+T0 = 290;
+initialNoise = K*fmBW*Ta;
+noiseFigure = 9;
 for n_fm = 1: nFM
     frec = fmIntensity(n_fm,1);
     intensity = fmIntensity(n_fm,2);
     longOnda = (3*10^8)/(frec*(10^6));%(m)
+    %Ruido antena
+    noiseFMAntena = K*fmBW*Ta + K*fmBW*(fmNoiseFigure-1)*T0;
+    %Ruido salida amplificador = (K*fmBW*Ta*Gamp/AttCable + K*fmBW*(fmF-1)*T0/AttCable)*Gamp + K*fmBW*(F-1)*T0*Gamp) 
+    noiseAmplifier = noiseFMAntena/(10^(frecuency_interpolation(frec,coaxialFrecuencyAtenuation)*dFM/10))*(10^(frecuency_interpolation(frec,fmAmplifierG)/10)) + (K*fmBW*(10^(noiseFigure/10) -1)*T0*(10^(frecuency_interpolation(frec,fmAmplifierG)/10)));
+    %Ruido salida distribuidor, usamos la atenuacion por insercion como figura de ruido
+    noiseDistrib = noiseAmplifier/(10^(frecuency_interpolation(frec,splitterInsertionLoss)/10)) + (K*fmBW*(10^(frecuency_interpolation(frec,splitterInsertionLoss)/10) -1)*T0/(10^(frecuency_interpolation(frec,splitterInsertionLoss)/10)));
+    %Ruido Combinador
+    noiseComb = noiseDistrib/(10^(frecuency_interpolation(frec,combAtenuation)/10)) + (K*fmBW*(10^(frecuency_interpolation(frec,combAtenuation)/10) -1)*T0/(10^(frecuency_interpolation(frec,combAtenuation)/10)));
+    noiseFloor = noiseComb/(10^(frecuency_interpolation(frec,coaxialFrecuencyAtenuation*dFloor)/10));
+    
     fmCampo = 10*log10(intensity);%(dBs)
     %La atenuacion a FM se obtiene interpolando las frecuencias del coaxial (W)
     signalInAmpl = ((intensity^2) * (longOnda^2) * (10^(frecuency_interpolation(frec,fmFrecuencyAtenuation)/10))) / ( 4*120*(pi^2)*(dFM*frecuency_interpolation( frec, coaxialFrecuencyAtenuation )));
@@ -471,6 +511,7 @@ for n_fm = 1: nFM
     n_Floor= nFloor; %Empezamos calculando desde el piso más alto
 
     signal_derivator_floor_In = signalDerivatorIn;
+    noiseDerivatorIn = noiseFloor;
     while n_Floor >=1%Planta por planta
         if iscell(edificio{n_Floor}) ~=1 %No es celda = no creado
             %Creamos las viviendas en cada planta
@@ -483,6 +524,8 @@ for n_fm = 1: nFM
         signal_derivator_floor_Out = signal_derivator_floor_In - derivators{derivator,3};%derivators{derivator,3}=atenuacion por derivacion
         %Salida de PAU
         signal_pau_floor_out = signal_derivator_floor_Out - frecuency_interpolation(frec,pauInsertionLoss);
+        %Ruido salida derivador
+        noiseDerivatorOut = noiseDerivatorIn/(10^(derivators{derivator,3}/10)) + (K*fmBW*(10^(derivators{derivator,3}/10) -1)*T0/(10^(derivators{derivator,3}/10)));
         for house_n=1:nHouses%Casa por casa
             [basura,nTomasHouse] = size(housesInOneFloor{house_n});
             %Estructura de edificio
@@ -492,6 +535,8 @@ for n_fm = 1: nFM
             end
             vecTomas = toma_algoritmo( tomas,nTomasHouse );
             signalToma = signal_pau_floor_out;%Señal antes de la primera toma de la vivienda (Hay que contar para cada vivienda la distancia)
+            %Ruido en PAU y distancia
+            noisePAU = noiseDerivatorOut/(10^(frecuency_interpolation(frec,pauInsertionLoss)/10)) + (K*fmBW*(10^(frecuency_interpolation(frec,pauInsertionLoss)/10) -1)*T0/(10^(frecuency_interpolation(frec,pauInsertionLoss)/10)));
             for toma_n=1:nTomasHouse%Toma por toma
                 %['floor=' num2str(n_Floor) ' house=' num2str(house_n) ' toma=' num2str(toma_n)]%Debug
                 %Estructura de edificio
@@ -508,9 +553,7 @@ for n_fm = 1: nFM
                 %Elegimos un tipo de toma
                 toma = vecTomas(toma_n);
                 %Calculamos la señal que obtenemos en la toma-------------
-                
-                %attDerivationdEV =
-                %frecuency_interpolation(frec,tomas{toma,2})%debug
+                %attDerivationdEV =frecuency_interpolation(frec,tomas{toma,2})%debug
                 signalTomaFinal = signalToma - frecuency_interpolation(frec,tomas{toma,2});
                 edificio{n_Floor}{house_n}{toma_n}{n_fm}{1} = ['FM' num2str(n_fm)];
                 edificio{n_Floor}{house_n}{toma_n}{n_fm}{2} = signalTomaFinal;
@@ -525,13 +568,28 @@ for n_fm = 1: nFM
                      maxMinSignal{n_fm,3}{2} = signalTomaFinal;
                 end
                 %Calculamos el nivel de SNR en la toma--------------------
-                % Pendiente......
-                Ta = 950;
-                T0 = 290;
-                initialNoise = K*fmBW*Ta;
-                %
-                %
-                %
+                %Primera toma del PAU, el resto de la toma de paso
+                if(toma_n == 1)
+                    noiseCableToma = noisePAU/(10^(frecuency_interpolation(frec,coaxialFrecuencyAtenuation*housesInOneFloor{house_n}(toma_n))/10));
+                else
+                    noiseCableToma = noiseTomaPass/(10^(frecuency_interpolation(frec,coaxialFrecuencyAtenuation*housesInOneFloor{house_n}(toma_n))/10));
+                end
+                %Ruido en la toma
+                noiseToma = noiseCableToma/(10^(frecuency_interpolation(frec,tomas{toma,2})/10)) + (K*fmBW*(10^(frecuency_interpolation(frec,tomas{toma,2})/10) -1)*T0/(10^(frecuency_interpolation(frec,tomas{toma,2})/10)));
+                %Ruido por paso en la toma
+                noiseTomaPass = noiseCableToma/(10^(frecuency_interpolation(frec,tomas{toma,3})/10)) + (K*fmBW*(10^(frecuency_interpolation(frec,tomas{toma,3})/10) -1)*T0/(10^(frecuency_interpolation(frec,tomas{toma,3})/10)));
+                snrToma = 10*log10(10^(signalTomaFinal/10)/noiseToma);
+                edificio{n_Floor}{house_n}{toma_n}{n_fm}{3} = snrToma;
+                
+                if(snrToma > maxMinSignal{n_fm,4}{2})
+                     maxMinSignal{n_fm,4}{1} = ['floor=' num2str(n_Floor) ' house=' num2str(house_n) ' toma=' num2str(toma_n)];
+                     maxMinSignal{n_fm,4}{2} = snrToma;
+                end
+                if(snrToma < maxMinSignal{n_fm,5}{2})
+                     maxMinSignal{n_fm,5}{1} = ['floor=' num2str(n_Floor) ' house=' num2str(house_n) ' toma=' num2str(toma_n)];
+                     maxMinSignal{n_fm,5}{2} = snrToma;
+                end
+                
                 %Pasamos a la siguiente toma y atenuamos por paso
                 %attPasoPaso = frecuency_interpolation(frec,tomas{toma,3})%DEBUG
                 signalToma = signalToma - frecuency_interpolation(frec,tomas{toma,3});
@@ -542,17 +600,36 @@ for n_fm = 1: nFM
         %Calculamos la señal que tendra el siguiente derivador
         %derivators{derivator,4} atenuacion por paso para cierta frecuencia
         signal_derivator_floor_In = signal_derivator_floor_In - frecuency_interpolation(frec,derivators{derivator,4}) - dFloor*frecuency_interpolation(frec,coaxialFrecuencyAtenuation);
+        noiseDerivatorIn = noiseDerivatorIn/(10^(frecuency_interpolation(frec,derivators{derivator,4})/10)) + (K*fmBW*(10^(frecuency_interpolation(frec,derivators{derivator,4})/10) -1)*T0/(10^(frecuency_interpolation(frec,derivators{derivator,4})/10)));
     end
 end
 
-%%Calculo UHF-------------------------------------------------------------
+%% Calculo UHF-------------------------------------------------------------
+T0 = 290;
+initialNoise = K*uhfBW*Ta;
+noiseFigure = 9;
+
 for channel=1:n_uhf
+    
     frec = frecIntensity(channel,1);
     intensity = frecIntensity(channel,2);
     longOnda = (3*10^8)/(frec*(10^6));%(m)
-    fmCampo = 10*log10(intensity);%(dBs)
+    
+    Ta = frecuency_interpolation(frec,uhfTa);
+    %Ruido antena
+    noiseUHFAntena = K*uhfBW*Ta + K*uhfBW*(0)*T0;
+    %Ruido salida amplificador = (K*fmBW*Ta*Gamp/AttCable + K*fmBW*(fmF-1)*T0/AttCable)*Gamp + K*fmBW*(F-1)*T0*Gamp) 
+    noiseAmplifier = noiseUHFAntena/(10^(frecuency_interpolation(frec,coaxialFrecuencyAtenuation)*dUHF/10))*(10^(frecuency_interpolation(frec,uhfAmplifierG)/10)) + (K*uhfBW*(10^(noiseFigure/10) -1)*T0*(10^(frecuency_interpolation(frec,uhfAmplifierG)/10)));
+    %Ruido salida distribuidor, usamos la atenuacion por insercion como figura de ruido
+    noiseDistrib = noiseAmplifier/(10^(frecuency_interpolation(frec,splitterInsertionLoss)/10)) + (K*uhfBW*(10^(frecuency_interpolation(frec,splitterInsertionLoss)/10) -1)*T0/(10^(frecuency_interpolation(frec,splitterInsertionLoss)/10)));
+    %Ruido Combinador
+    noiseComb = noiseDistrib/(10^(frecuency_interpolation(frec,combAtenuation)/10)) + (K*uhfBW*(10^(frecuency_interpolation(frec,combAtenuation)/10) -1)*T0/(10^(frecuency_interpolation(frec,combAtenuation)/10)));
+    noiseFloor = noiseComb/(10^(frecuency_interpolation(frec,coaxialFrecuencyAtenuation*dFloor)/10));
+
+    
+    uhfCampo = 10*log10(intensity);%(dBs)
     %La atenuacion a UHF se obtiene interpolando las frecuencias del coaxial (W)
-    signalInAmpl = ((intensity^2) * (longOnda^2) * (10^(frecuency_interpolation(frec,uhfFrecuencyAtenuation)/10))) / ( 4*120*(pi^2)*(dFM*frecuency_interpolation( frec, coaxialFrecuencyAtenuation )));
+    signalInAmpl = ((intensity^2) * (longOnda^2) * (10^(frecuency_interpolation(frec,uhfFrecuencyAtenuation)/10))) / ( 4*120*(pi^2)*(dUHF*frecuency_interpolation( frec, coaxialFrecuencyAtenuation )));
     %Atenuación a la salida del amplificador (dBW)
     signalOutAmpl = 10*log10(signalInAmpl) + frecuency_interpolation(frec,uhfAmplifierG);%(dBW) señal a la salida del amplificador
     signalOutDistri = signalOutAmpl - frecuency_interpolation(frec,splitterInsertionLoss);%(dBW) señal tras el distribuidor (duplica para los satelites)
@@ -560,7 +637,7 @@ for channel=1:n_uhf
     signalDerivatorIn = signalOutComb - dFloor*frecuency_interpolation(frec,coaxialFrecuencyAtenuation);%(dBW) señal que llega al derivador de planta
 
     n_Floor= nFloor; %Empezamos calculando desde el piso más alto
-
+    noiseDerivatorIn = noiseFloor;
     signal_derivator_floor_In = signalDerivatorIn;
     while n_Floor >=1%Planta por planta
         if iscell(edificio{n_Floor}) ~=1 %No es celda = no creado
@@ -574,6 +651,8 @@ for channel=1:n_uhf
         signal_derivator_floor_Out = signal_derivator_floor_In - derivators{derivator,3};%derivators{derivator,3}=atenuacion por derivacion
         %Salida de PAU
         signal_pau_floor_out = signal_derivator_floor_Out - frecuency_interpolation(frec,pauInsertionLoss);
+        %Ruido salida derivador
+        noiseDerivatorOut = noiseDerivatorIn/(10^(derivators{derivator,3}/10)) + (K*uhfBW*(10^(derivators{derivator,3}/10) -1)*T0/(10^(derivators{derivator,3}/10)));
         for house_n=1:nHouses%Casa por casa
             [basura,nTomasHouse] = size(housesInOneFloor{house_n});
             %Estructura de edificio
@@ -583,6 +662,8 @@ for channel=1:n_uhf
             end
             signalToma = signal_pau_floor_out;%Señal antes de la primera toma de la vivienda (Hay que contar para cada vivienda la distancia)
             vecTomas = toma_algoritmo( tomas,nTomasHouse );
+            %Ruido en PAU y distancia
+            noisePAU = noiseDerivatorOut/(10^(frecuency_interpolation(frec,pauInsertionLoss)/10)) + (K*uhfBW*(10^(frecuency_interpolation(frec,pauInsertionLoss)/10) -1)*T0/(10^(frecuency_interpolation(frec,pauInsertionLoss)/10)));
             for toma_n=1:nTomasHouse%Toma por toma
                 %Estructura de edificio
                 if iscell(edificio{n_Floor}{house_n}{toma_n}) ~=1 %No es celda = no creado
@@ -614,11 +695,28 @@ for channel=1:n_uhf
                 end
                 
                 %Calculamos el nivel de SNR en la toma--------------------
-                % Pendiente......
-                %
-                %
-                %
-                %
+                %Primera toma del PAU, el resto de la toma de paso
+                if(toma_n == 1)
+                    noiseCableToma = noisePAU/(10^(frecuency_interpolation(frec,coaxialFrecuencyAtenuation*housesInOneFloor{house_n}(toma_n))/10));
+                else
+                    noiseCableToma = noiseTomaPass/(10^(frecuency_interpolation(frec,coaxialFrecuencyAtenuation*housesInOneFloor{house_n}(toma_n))/10));
+                end
+                %Ruido en la toma
+                noiseToma = noiseCableToma/(10^(frecuency_interpolation(frec,tomas{toma,2})/10)) + (K*uhfBW*(10^(frecuency_interpolation(frec,tomas{toma,2})/10) -1)*T0/(10^(frecuency_interpolation(frec,tomas{toma,2})/10)));
+                %Ruido por paso en la toma
+                noiseTomaPass = noiseCableToma/(10^(frecuency_interpolation(frec,tomas{toma,3})/10)) + (K*uhfBW*(10^(frecuency_interpolation(frec,tomas{toma,3})/10) -1)*T0/(10^(frecuency_interpolation(frec,tomas{toma,3})/10)));
+                snrToma = 10*log10(10^(signalTomaFinal/10)/noiseToma);
+                edificio{n_Floor}{house_n}{toma_n}{n_fm + channel}{3} = snrToma;
+                
+                if(snrToma > maxMinSignal{n_fm + channel,4}{2})
+                     maxMinSignal{n_fm + channel,4}{1} = ['floor=' num2str(n_Floor) ' house=' num2str(house_n) ' toma=' num2str(toma_n)];
+                     maxMinSignal{n_fm + channel,4}{2} = snrToma;
+                end
+                if(snrToma < maxMinSignal{n_fm + channel,5}{2})
+                     maxMinSignal{n_fm + channel,5}{1} = ['floor=' num2str(n_Floor) ' house=' num2str(house_n) ' toma=' num2str(toma_n)];
+                     maxMinSignal{n_fm + channel,5}{2} = snrToma;
+                end
+                
                 %Pasamos a la siguiente toma y atenuamos por paso
                 signalToma = signalToma - frecuency_interpolation(frec,tomas{toma,3});
             end
@@ -628,6 +726,7 @@ for channel=1:n_uhf
         %Calculamos la señal que tendra el siguiente derivador
         %derivators{derivator,4} atenuacion por paso para cierta frecuencia
         signal_derivator_floor_In = signal_derivator_floor_In - frecuency_interpolation(frec,derivators{derivator,4}) - dFloor*frecuency_interpolation(frec,coaxialFrecuencyAtenuation);
+        noiseDerivatorIn = noiseDerivatorIn/(10^(frecuency_interpolation(frec,derivators{derivator,4})/10)) + (K*uhfBW*(10^(frecuency_interpolation(frec,derivators{derivator,4})/10) -1)*T0/(10^(frecuency_interpolation(frec,derivators{derivator,4})/10)));
     end
 end
 
@@ -635,20 +734,26 @@ end
 
 %% Calculo Satelite--------------------------------------------------------
 %Hay que pasar de PIRE a mV/m
+Ta = 155.5;
 for sat_n=1:nSAT
     frec = 12500;
-    intensity =satMatrix{sat_n,2};
+    PIRE =satMatrix{sat_n,2};
     longOnda = (3*10^8)/(frec*(10^6));%(m)
+    
+    Aeff = pi*((satDiameter/2)^2);
+    Gant = Aeff*4*pi/(longOnda^2);
+    Ts = Ta + 290*((10^(0.5/10)-1));
+    intensity = (10^(PIRE/10))*Aeff*10^(lnbG/10)*10^(dSAT*frecuency_interpolation(frec,coaxialFrecuencyAtenuation)/10)/(4*pi*(36000000)^2);
+    frec = 1550;%Cambio a frecuencia intermedia
     satCampo = 10*log10(intensity);%(dBs)
     %La atenuacion  SAT se obtiene interpolando las frecuencias del coaxial (W)
-    signalInAmpl = ((intensity^2) * (longOnda^2) * (10^(frecuency_interpolation(frec,satFrecuencyAtenuation)/10))) / ( 4*120*(pi^2)*(dFM*frecuency_interpolation( frec, coaxialFrecuencyAtenuation )));
+    signalInAmpl = intensity;
     %Atenuación a la salida del amplificador (dBW)
-    frec = 1550;
+    
     signalOutAmpl = 10*log10(signalInAmpl) + frecuency_interpolation(frec,satAmplifierG);%(dBW) señal a la salida del amplificador
     signalOutDistri = signalOutAmpl;%(dBW) señal tras el distribuidor (duplica para los satelites)
     signalOutComb = signalOutDistri - frecuency_interpolation(frec,combAtenuation);%(dBW) señal tras el combinador
     signalDerivatorIn = signalOutComb - dFloor*frecuency_interpolation(frec,coaxialFrecuencyAtenuation);%(dBW) señal que llega al derivador de planta
-
     n_Floor= nFloor; %Empezamos calculando desde el piso más alto
 
     signal_derivator_floor_In = signalDerivatorIn;
@@ -691,6 +796,18 @@ for sat_n=1:nSAT
                 signalTomaFinal = signalToma - frecuency_interpolation(frec,tomas{toma,2});
                 edificio{n_Floor}{house_n}{toma_n}{nFM + nUHF + sat_n}{1} = satMatrix{sat_n,1};%Nombre del satelite
                 edificio{n_Floor}{house_n}{toma_n}{nFM + nUHF + sat_n}{2} = signalTomaFinal;
+                
+                 if(signalTomaFinal > maxMinSignal{n_fm + n_uhf + sat_n,2}{2})
+                     maxMinSignal{n_fm + n_uhf + sat_n,1} = satMatrix(sat_n,1);
+                     maxMinSignal{n_fm + n_uhf + sat_n,2}{1} = ['floor=' num2str(n_Floor) ' house=' num2str(house_n) ' toma=' num2str(toma_n)];
+                     maxMinSignal{n_fm + n_uhf + sat_n,2}{2} = signalTomaFinal;
+                end
+                if(signalTomaFinal < maxMinSignal{n_fm + n_uhf + sat_n,3}{2})
+                     maxMinSignal{n_fm + n_uhf + sat_n,1} = satMatrix(sat_n,1);
+                     maxMinSignal{n_fm + n_uhf + sat_n,3}{1} = ['floor=' num2str(n_Floor) ' house=' num2str(house_n) ' toma=' num2str(toma_n)];
+                     maxMinSignal{n_fm + n_uhf + sat_n,3}{2} = signalTomaFinal;
+                end
+                
                 %Calculamos el nivel de SNR en la toma--------------------
                 % Pendiente......
                 %
@@ -712,7 +829,7 @@ end
 
 %% Calculadora Precio
 
-precioTotal = precioTotal + neededCombs*combPrice;                                                                                                         %Combinadores
+precioTotal = precioTotal + neededCombs*combPrice;                                                                                           %Combinadores
 precioTotal = precioTotal + neededUHFChanelAmplifiers*uhfAmplifierPrice;                                                                     %Amplificadores UHF
 precioTotal = precioTotal + 1*fmAmplifierPrice;                                                                                              %Amplificadores FM
 precioTotal = precioTotal + n_sat*satAmplifierPrice;                                                                                         %Amplificadores SAT
