@@ -83,6 +83,9 @@ nChannels = nFM+ nUHF + nSAT;
 fmBW=200000;
 uhfBW = 8000000;
 satBW = 36000000;
+%IVA
+IVA = 0.21;
+
 %% 
 % ---------------------------Datos Componentes ---------------------------
 %-------------------------------------------------------------------------
@@ -180,14 +183,22 @@ satDiameter = 1;
 satFrecuencyAtenuation = [
     12500, 40.3
 ];
-uhfNoiseFigure = 0;
-
+satNoiseFigure = 0;
+satTa = 155.5;
 %% ------------------------------ LNB ------------------------------------
 % Nombre: UEU-121K
 % Datasheet: http://www.ikusi.tv/sites/default/files/imported/descargables/Ficha%20tecnica%20UEU-121K_es.pdf
 % Ref: 1113
 lnbG = 58;
 lnbNoise = 0.2;
+lnbPricePerUnit = 11.2;
+
+%% -------------------------- Impedancias --------------------------------
+% Nombre: CTF-075
+% Datasheet: 
+% Ref: 2221
+impedancePricePerUnit = 0.65;
+
 
 %% ---------------------- Distribuidor Television ------------------------
 % Se encarga de dividir la señal de TV en el numero de satelites del que
@@ -324,14 +335,14 @@ combAtenuation = [
 % Desacoplo entre entradas (dB)
 combDesAcoplo = 0;
 
-%-------------------------------- Derivador ------------------------------
+%% -------------------------------- Derivador -----------------------------
 % Nombre: UDL-800
 % Datasheet:http://www.ikusi.tv/sites/default/files/imported/descargables/udl800-es.pdf
 % Ref: 3366
 % Estructura de la celda(cell)
 %
-% |_____________|__Salidas__|__Atenuation_Derivation(dB)__|___Atenuation_Pass(dB)___|__Desacoplo_direccional_(dB)_|_Desacoplo_entre_salidas(dB)__|__Perdidas_de_retorno_(dB)__|
-% |_Derivator_1_|_____8_____|____________16_______________|__[5,4;862,4;950,4.4;]___|_____[5,30;862,30;950,30;]___|_____[5,34;862,32;950,30;]____|_____________10_____________|
+% |_____________|__Salidas__|__Atenuation_Derivation(dB)__|___Atenuation_Pass(dB)___|__Desacoplo_direccional_(dB)_|_Desacoplo_entre_salidas(dB)__|__Perdidas_de_retorno_(dB)__|__Price__|
+% |_Derivator_1_|_____8_____|____________16_______________|__[5,4;862,4;950,4.4;]___|_____[5,30;862,30;950,30;]___|_____[5,34;862,32;950,30;]____|_____________10_____________|____15___|
 
 derivators = {
     %'UDL-110',1, 10, [5,1.1;862,1.1;950,1.7;1550,1.7; 1551,2.3;2300,2.3;],[5,29;300,29;301,29;862,29; 950,19;2300,19;],[5,0;300,0;301,0;862,0; 950,0;2300,0;],15;
@@ -339,14 +350,14 @@ derivators = {
     %'UDL-120',1, 20, [5,0.9;862,0.9;950,1.6;1550,1.6; 1551,2.1;2300,2.1;],[5,31;300,31;301,28;862,28; 950,19;2300,19;],[5,0;300,0;301,0;862,0; 950,0;2300,0;],15;
     %'UDL-125',1, 25, [5,0.5;862,0.5;950,1.3;1550,1.3; 1551,2.0;2300,2.0;],[5,38;300,38;301,35;862,35; 950,24;2300,24;],[5,0;300,0;301,0;862,0; 950,0;2300,0;],15;
     
-    'UDL-825',8, 25, [5,1.8;862,1.8;950,2;1550,2; 1551,2.2;2300,2.2;],[5,33;300,33;301,36;862,36; 950,28;2300,28;],[5,30;300,30;301,28;862,28; 950,28;2300,28;],10;
+    'UDL-825',8, 25, [5,1.8;862,1.8;950,2;1550,2; 1551,2.2;2300,2.2;],[5,33;300,33;301,36;862,36; 950,28;2300,28;],[5,30;300,30;301,28;862,28; 950,28;2300,28;],10,9.5;
     
-    'UDL-820',8, 20, [5,1.8;862,1.8;950,2;1550,2; 1551,2.2;2300,2.2;],[5,30;300,30;301,30;862,30; 950,23;2300,23;],[5,30;300,30;301,28;862,28; 950,28;2300,28;],10;
-    'UDL-816',8, 16, [5,4;862,4;950,4.4;1550,4.4; 1551,4.8;2300,4.8;],[5,30;300,30;301,30;862,30; 950,27;2300,27;],[5,34;300,34;301,32;862,32; 950,25;2300,25;],10;
+    'UDL-820',8, 20, [5,1.8;862,1.8;950,2;1550,2; 1551,2.2;2300,2.2;],[5,30;300,30;301,30;862,30; 950,23;2300,23;],[5,30;300,30;301,28;862,28; 950,28;2300,28;],10,9.5;
+    'UDL-816',8, 16, [5,4;862,4;950,4.4;1550,4.4; 1551,4.8;2300,4.8;],[5,30;300,30;301,30;862,30; 950,27;2300,27;],[5,34;300,34;301,32;862,32; 950,25;2300,25;],10,9.5;
     };
 [nDerivators,basura]=size(derivators);
 
-%-------------------------------- PAU -------------------------------------
+%% -------------------------------- PAU ------------------------------------
 % Nombre: PAU-204
 % Datasheet:http://www.ikusi.tv/sites/default/files/imported/descargables/pau-ficha-tecnica-es.pdf
 % Ref: 3331
@@ -358,8 +369,9 @@ pauInsertionLoss = [
     950,4.5;
     2300,4.5;
 ];
+pauPricePerUnit = 6.1;
 
-%-----------------------------TOMAS---------------------------------------
+%% -----------------------------TOMAS--------------------------------------
 % Nombre: ARTU-900
 % Datasheet:http://www.ikusi.tv/sites/default/files/imported/descargables/Ficha%20tecnica%20ARTU902_es.pdf
 % Ref: 2479
@@ -429,17 +441,21 @@ end
 %Numero de tomas y añadir ya el precio
 nTomasTotal = 0;
 precioTotal = 0;% Cada toma es diferente
+nViviendasTotal = 0;
 for floor_n=1:nFloor
+    derivator = round((nFloor-floor_n + 1)*nDerivators/nFloor);
+    precioTotal = precioTotal + derivators{derivator,8}*2;
     for house_n=1:nHouses
+        nViviendasTotal = nViviendasTotal + 1;
         [basura,nTomasHouse] = size(housesInOneFloor{house_n});
         nTomasTotal = nTomasTotal + nTomasHouse;
         vecTomas = toma_algoritmo( tomas,nTomasHouse );
-        for i=1:size(vecTomas)
+        [basura,longTomas] = size(vecTomas);
+        for i=1:longTomas
             precioTotal = precioTotal + tomas{vecTomas(i),5};%Añadir precio de cada toma
         end
     end
 end
-
 
 %% Calculadora ----------------------------------------------------------
 % Para aclarar conceptos y no liar variables que empiezan parecido ej :
@@ -734,28 +750,39 @@ end
 
 %% Calculo Satelite--------------------------------------------------------
 %Hay que pasar de PIRE a mV/m
-Ta = 155.5;
+Ta = satTa;
 for sat_n=1:nSAT
     frec = 12500;
     PIRE =satMatrix{sat_n,2};
     longOnda = (3*10^8)/(frec*(10^6));%(m)
+    noiseFigure = satAmplifierNoiseFigure;
     
     Aeff = pi*((satDiameter/2)^2);
     Gant = Aeff*4*pi/(longOnda^2);
     Ts = Ta + 290*((10^(0.5/10)-1));
     intensity = (10^(PIRE/10))*Aeff*10^(lnbG/10)*10^(dSAT*frecuency_interpolation(frec,coaxialFrecuencyAtenuation)/10)/(4*pi*(36000000)^2);
     frec = 1550;%Cambio a frecuencia intermedia
+    
+    noiseSATAntena = K*satBW*Ta + K*satBW*(0)*T0;
+    noiseAmplifier = noiseSATAntena/(10^(frecuency_interpolation(frec,coaxialFrecuencyAtenuation)*dSAT/10))*(10^(frecuency_interpolation(frec,satAmplifierG)/10)) + (K*satBW*(10^(noiseFigure/10) -1)*T0*(10^(frecuency_interpolation(frec,satAmplifierG)/10)));
+    %Ruido salida distribuidor, usamos la atenuacion por insercion como figura de ruido
+    noiseDistrib = noiseAmplifier/(10^(frecuency_interpolation(frec,splitterInsertionLoss)/10)) + (K*satBW*(10^(frecuency_interpolation(frec,splitterInsertionLoss)/10) -1)*T0/(10^(frecuency_interpolation(frec,splitterInsertionLoss)/10)));
+    %Ruido Combinador
+    noiseComb = noiseDistrib/(10^(frecuency_interpolation(frec,combAtenuation)/10)) + (K*satBW*(10^(frecuency_interpolation(frec,combAtenuation)/10) -1)*T0/(10^(frecuency_interpolation(frec,combAtenuation)/10)));
+    noiseFloor = noiseComb/(10^(frecuency_interpolation(frec,coaxialFrecuencyAtenuation*dFloor)/10));
+
+    
     satCampo = 10*log10(intensity);%(dBs)
     %La atenuacion  SAT se obtiene interpolando las frecuencias del coaxial (W)
     signalInAmpl = intensity;
     %Atenuación a la salida del amplificador (dBW)
-    
     signalOutAmpl = 10*log10(signalInAmpl) + frecuency_interpolation(frec,satAmplifierG);%(dBW) señal a la salida del amplificador
     signalOutDistri = signalOutAmpl;%(dBW) señal tras el distribuidor (duplica para los satelites)
     signalOutComb = signalOutDistri - frecuency_interpolation(frec,combAtenuation);%(dBW) señal tras el combinador
     signalDerivatorIn = signalOutComb - dFloor*frecuency_interpolation(frec,coaxialFrecuencyAtenuation);%(dBW) señal que llega al derivador de planta
+    
     n_Floor= nFloor; %Empezamos calculando desde el piso más alto
-
+    noiseDerivatorIn = noiseFloor;
     signal_derivator_floor_In = signalDerivatorIn;
     while n_Floor >=1%Planta por planta
         if iscell(edificio{n_Floor}) ~=1 %No es celda = no creado
@@ -769,6 +796,8 @@ for sat_n=1:nSAT
         signal_derivator_floor_Out = signal_derivator_floor_In - derivators{derivator,3};%derivators{derivator,3}=atenuacion por derivacion
         %Salida de PAU
         signal_pau_floor_out = signal_derivator_floor_Out - frecuency_interpolation(frec,pauInsertionLoss);
+        %Ruido salida derivador
+        noiseDerivatorOut = noiseDerivatorIn/(10^(derivators{derivator,3}/10)) + (K*satBW*(10^(derivators{derivator,3}/10) -1)*T0/(10^(derivators{derivator,3}/10)));
         for house_n=1:nHouses%Casa por casa
             [basura,nTomasHouse] = size(housesInOneFloor{house_n});
             %Estructura de edificio
@@ -778,6 +807,8 @@ for sat_n=1:nSAT
             end
             vecTomas = toma_algoritmo( tomas,nTomasHouse );
             signalToma = signal_pau_floor_out;%Señal antes de la primera toma de la vivienda (Hay que contar para cada vivienda la distancia)
+            %Ruido en PAU y distancia
+            noisePAU = noiseDerivatorOut/(10^(frecuency_interpolation(frec,pauInsertionLoss)/10)) + (K*satBW*(10^(frecuency_interpolation(frec,pauInsertionLoss)/10) -1)*T0/(10^(frecuency_interpolation(frec,pauInsertionLoss)/10)));
             for toma_n=1:nTomasHouse%Toma por toma
                 %Estructura de edificio
                 if iscell(edificio{n_Floor}{house_n}{toma_n}) ~=1 %No es celda = no creado
@@ -809,11 +840,28 @@ for sat_n=1:nSAT
                 end
                 
                 %Calculamos el nivel de SNR en la toma--------------------
-                % Pendiente......
-                %
-                %
-                %
-                %
+                %Primera toma del PAU, el resto de la toma de paso
+                if(toma_n == 1)
+                    noiseCableToma = noisePAU/(10^(frecuency_interpolation(frec,coaxialFrecuencyAtenuation*housesInOneFloor{house_n}(toma_n))/10));
+                else
+                    noiseCableToma = noiseTomaPass/(10^(frecuency_interpolation(frec,coaxialFrecuencyAtenuation*housesInOneFloor{house_n}(toma_n))/10));
+                end
+                %Ruido en la toma
+                noiseToma = noiseCableToma/(10^(frecuency_interpolation(frec,tomas{toma,2})/10)) + (K*satBW*(10^(frecuency_interpolation(frec,tomas{toma,2})/10) -1)*T0/(10^(frecuency_interpolation(frec,tomas{toma,2})/10)));
+                %Ruido por paso en la toma
+                noiseTomaPass = noiseCableToma/(10^(frecuency_interpolation(frec,tomas{toma,3})/10)) + (K*satBW*(10^(frecuency_interpolation(frec,tomas{toma,3})/10) -1)*T0/(10^(frecuency_interpolation(frec,tomas{toma,3})/10)));
+                snrToma = 10*log10(10^(signalTomaFinal/10)/noiseToma);
+                edificio{n_Floor}{house_n}{toma_n}{n_fm + n_uhf + sat_n}{3} = snrToma;
+                
+                if(snrToma > maxMinSignal{n_fm + n_uhf + sat_n,4}{2})
+                     maxMinSignal{n_fm + n_uhf + sat_n,4}{1} = ['floor=' num2str(n_Floor) ' house=' num2str(house_n) ' toma=' num2str(toma_n)];
+                     maxMinSignal{n_fm + n_uhf + sat_n,4}{2} = snrToma;
+                end
+                if(snrToma < maxMinSignal{n_fm + n_uhf + sat_n,5}{2})
+                     maxMinSignal{n_fm + n_uhf + sat_n,5}{1} = ['floor=' num2str(n_Floor) ' house=' num2str(house_n) ' toma=' num2str(toma_n)];
+                     maxMinSignal{n_fm + n_uhf + sat_n,5}{2} = snrToma;
+                end
+                
                 %Pasamos a la siguiente toma y atenuamos por paso
                 signalToma = signalToma - frecuency_interpolation(frec,tomas{toma,3});
             end
@@ -823,18 +871,23 @@ for sat_n=1:nSAT
         %Calculamos la señal que tendra el siguiente derivador
         %derivators{derivator,4} atenuacion por paso para cierta frecuencia
         signal_derivator_floor_In = signal_derivator_floor_In - frecuency_interpolation(frec,derivators{derivator,4}) - dFloor*frecuency_interpolation(frec,coaxialFrecuencyAtenuation);
+        noiseDerivatorIn = noiseDerivatorIn/(10^(frecuency_interpolation(frec,derivators{derivator,4})/10)) + (K*satBW*(10^(frecuency_interpolation(frec,derivators{derivator,4})/10) -1)*T0/(10^(frecuency_interpolation(frec,derivators{derivator,4})/10)));
     end
 end
 
 
 %% Calculadora Precio
-
+%Precio de tomas y derivadores ya añadido arriba
 precioTotal = precioTotal + neededCombs*combPrice;                                                                                           %Combinadores
 precioTotal = precioTotal + neededUHFChanelAmplifiers*uhfAmplifierPrice;                                                                     %Amplificadores UHF
 precioTotal = precioTotal + 1*fmAmplifierPrice;                                                                                              %Amplificadores FM
 precioTotal = precioTotal + n_sat*satAmplifierPrice;                                                                                         %Amplificadores SAT
 precioTotal = precioTotal + neededPrincipalSplitter * splitterPrice;                                                                         %Splitter principal
 precioTotal = precioTotal + neededSateliteAntenna*satPricePerUnit + neededFMAntenna*fmPricePerUnit + neededUHFAntenna*uhfPricePerUnit;       %Antenas
-precioTotal = precioTotal + neededCoaxial*coaxialPricePerUnit; 
-%Combinadores
+precioTotal = precioTotal + neededCoaxial*coaxialPricePerUnit;                                                                               %Precio de cable
+precioTotal = precioTotal + n_sat*lnbPricePerUnit;                                                                                           %Precio LNBs
+precioTotal = precioTotal + nTomasTotal*impedancePricePerUnit;                                                                               %Impedancias
+precioTotal = precioTotal + nViviendasTotal*pauPricePerUnit;                                                                                 %PAU
+precioSinIva = precioTotal
+precioConIva = precioSinIva * (1 + IVA)
 
